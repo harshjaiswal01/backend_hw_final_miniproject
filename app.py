@@ -294,7 +294,10 @@ def delete_product(id):
     result = db.session.execute(query)
 
     if result.rowcount == 0:
-        return jsonify({"Error":"Customer not found"}), 404
+        return jsonify({"Error":"Product not found"}), 404
+    
+    if result is None:
+        return jsonify({"Error":"Product not found 2"}), 404
     
     db.session.commit()
     return jsonify({"Message":"Successfully removed Product!!!"})
@@ -317,6 +320,8 @@ orders_schema = OrderSchema(many=True)
 
 @app.route("/order", methods=["POST"])
 def add_order():
+
+
     try:
         order_data = order_schema.load(request.json)
 
@@ -328,10 +333,19 @@ def add_order():
     
     new_order = Orders(order_date = date.today(), customer_id = order_data["customer_id"], expected_delivery_date = future_date)
 
+    querycus = select(Customer).filter(Customer.id == new_order.customer_id)
+    resultcus = db.session.execute(querycus).scalars().first()
+
+    if resultcus is None:
+        return jsonify({"Error":"Customer not found"}), 404
+
     for item_id in order_data['items']:
         query = select(Products).filter(Products.id == item_id)
         item = db.session.execute(query).scalar()
         # print(items)
+
+        if item is None:
+            return jsonify({"Error":"Product not found!!!"})
         new_order.products.append(item)
 
     db.session.add(new_order)
